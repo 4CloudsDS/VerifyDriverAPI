@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "afebaS6jmIhGDULMrxJvKwmeGgLa4+2FzFxrmM9i0x8=",
+  "Source": "VerifyDriversAPI",
+  "BasePath": "_content/VerifyDriversAPI",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
