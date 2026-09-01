@@ -13,7 +13,20 @@ builder.Services.AddSwaggerGen();
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 25))));
+{
+    var provider = builder.Configuration["DatabaseProvider"] ?? "MySql";
+
+    if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseSqlite(builder.Configuration.GetConnectionString("SqliteConnection"));
+    }
+    else
+    {
+        options.UseMySql(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            new MySqlServerVersion(new Version(8, 0, 25)));
+    }
+});
 
 var app = builder.Build();
 

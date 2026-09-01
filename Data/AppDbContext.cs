@@ -18,6 +18,8 @@ namespace VerifyDriversAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            var isSqlite = Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
+
             // Configure User entity
             modelBuilder.Entity<User>().ToTable("_user")
                 .Property(u => u.uID).HasColumnName("uID").IsRequired();
@@ -63,7 +65,7 @@ namespace VerifyDriversAPI.Data
             modelBuilder.Entity<Vehicle>().Property(v => v.vModel_name).HasColumnName("vModel_name");
             modelBuilder.Entity<Vehicle>().Property(v => v.vModel_year).HasColumnName("vModel_year");
             modelBuilder.Entity<Vehicle>().Property(v => v.vPlatform_ID).HasColumnName("vPlatform_ID");
-            modelBuilder.Entity<Vehicle>().Property(v => v.vPartner_ID).HasColumnName("vPartner_ID");
+            modelBuilder.Entity<Vehicle>().Property(v => v.vPartner_ID).HasColumnName(isSqlite ? "vParter_ID" : "vPartner_ID");
 
             // Configure relationships for Vehicle entity
             modelBuilder.Entity<Vehicle>()
@@ -111,9 +113,18 @@ namespace VerifyDriversAPI.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Configure Partner entity
-            modelBuilder.Entity<Partner>().ToTable("_partner")
-                .Property(p => p.pID).HasColumnName("pID").IsRequired();
-            modelBuilder.Entity<Partner>().Property(p => p.pName).HasColumnName("pName");
+            if (isSqlite)
+            {
+                modelBuilder.Entity<Partner>().ToView("_user")
+                    .Property(p => p.pID).HasColumnName("uID").IsRequired();
+                modelBuilder.Entity<Partner>().Property(p => p.pName).HasColumnName("uNames");
+            }
+            else
+            {
+                modelBuilder.Entity<Partner>().ToTable("_partner")
+                    .Property(p => p.pID).HasColumnName("pID").IsRequired();
+                modelBuilder.Entity<Partner>().Property(p => p.pName).HasColumnName("pName");
+            }
         }
 
 
