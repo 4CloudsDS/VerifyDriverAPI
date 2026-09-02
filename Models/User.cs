@@ -11,10 +11,10 @@ namespace VerifyDriversAPI.Models
         
         [Required]
         [StringLength(35)]
-        public string uNames { get; set; }
+        public string uNames { get; set; } = string.Empty;
         
         [StringLength(6)]
-        public string uGender { get; set; }
+        public string uGender { get; set; } = string.Empty;
         
         public int uAge { get; set; }
         
@@ -30,10 +30,9 @@ namespace VerifyDriversAPI.Models
         //Needs to be aaded to DB
         //public int uPlatform_ID { get; set; }
 
-        // Navigation properties
-        public Vehicle? Vehicle { get; set; } // Make nullable
-        public Partner? Partner { get; set; } // Make nullable
-        public UserType? UserType { get; set; } // Make nullable
+        public Vehicle? Vehicle { get; set; }
+        public Partner? Partner { get; set; }
+        public UserType? UserType { get; set; }
 
         //Need to add the platform foreign key to DB 
         //public Platform? Platform { get; set; } // Nullable

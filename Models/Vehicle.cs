@@ -11,23 +11,22 @@ namespace VerifyDriversAPI.Models
         
         [Required]
         [StringLength(10)]
-        public string vregistration { get; set; }
+        public string vregistration { get; set; } = string.Empty;
         
         [StringLength(20)]
-        public string vMake { get; set; }
+        public string vMake { get; set; } = string.Empty;
         
         [StringLength(25)]
-        public string vModel_name { get; set; }
+        public string vModel_name { get; set; } = string.Empty;
         
         [StringLength(4)]
-        public string vModel_year { get; set; }
+        public string vModel_year { get; set; } = string.Empty;
         
         public int vPlatform_ID { get; set; }
         
         public int vPartner_ID { get; set; }
 
-        // Navigation properties
-        public Platform? Platform { get; set; } // Make nullable
-        public Partner? Partner { get; set; } // Make nullable
+        public Platform? Platform { get; set; }
+        public Partner? Partner { get; set; }
     }
 }
