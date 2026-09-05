@@ -4,8 +4,10 @@ namespace VerifyDriversAPI.Services
 {
     public interface IFeedbackModerationService
     {
-        StructuredFeedbackDto Submit(StructuredFeedbackRequest request);
+        Task<StructuredFeedbackDto> SubmitAsync(StructuredFeedbackRequest request, CancellationToken cancellationToken);
 
-        IReadOnlyList<StructuredFeedbackDto> GetQueue();
+        Task<IReadOnlyList<StructuredFeedbackDto>> GetQueueAsync(CancellationToken cancellationToken);
+
+        Task<DisputeDto?> DisputeAsync(Guid feedbackId, DisputeRequest request, CancellationToken cancellationToken);
     }
 }

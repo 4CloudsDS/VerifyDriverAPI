@@ -4,12 +4,14 @@ namespace VerifyDriversAPI.Services
 {
     public interface IVerificationCaseService
     {
-        VerificationCaseDto Create(CreateVerificationCaseRequest request);
+        Task<VerificationCaseDto> CreateAsync(CreateVerificationCaseRequest request, CancellationToken cancellationToken);
 
-        VerificationCaseDto? Get(Guid caseId);
+        Task<VerificationCaseDto?> GetAsync(Guid caseId, CancellationToken cancellationToken);
 
-        VerificationCaseDto? UpdateStatus(Guid caseId, string status);
+        Task<VerificationCaseDto?> UpdateStatusAsync(Guid caseId, string status, CancellationToken cancellationToken);
 
-        IReadOnlyList<VerificationCaseDto> GetQueue();
+        Task<IReadOnlyList<VerificationCaseDto>> GetQueueAsync(CancellationToken cancellationToken);
+
+        Task<DisputeDto?> DisputeAsync(Guid caseId, DisputeRequest request, CancellationToken cancellationToken);
     }
 }

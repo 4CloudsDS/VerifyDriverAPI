@@ -19,11 +19,13 @@ namespace VerifyDriversAPI.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(VerificationCaseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<VerificationCaseDto> Create(CreateVerificationCaseRequest request)
+        public async Task<ActionResult<VerificationCaseDto>> Create(
+            CreateVerificationCaseRequest request,
+            CancellationToken cancellationToken)
         {
             try
             {
-                var verificationCase = _verificationCases.Create(request);
+                var verificationCase = await _verificationCases.CreateAsync(request, cancellationToken);
                 return CreatedAtAction(nameof(Get), new { caseId = verificationCase.CaseId }, verificationCase);
             }
             catch (ArgumentException ex)
@@ -35,28 +37,55 @@ namespace VerifyDriversAPI.Controllers
         [HttpGet("{caseId:guid}")]
         [ProducesResponseType(typeof(VerificationCaseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<VerificationCaseDto> Get(Guid caseId)
+        public async Task<ActionResult<VerificationCaseDto>> Get(Guid caseId, CancellationToken cancellationToken)
         {
-            var verificationCase = _verificationCases.Get(caseId);
-            return verificationCase is null ? NotFound() : verificationCase;
+            var verificationCase = await _verificationCases.GetAsync(caseId, cancellationToken);
+            return verificationCase is null
+                ? Problem(title: "Verification case not found.", detail: $"No verification case exists for id {caseId}.", statusCode: StatusCodes.Status404NotFound)
+                : verificationCase;
         }
 
         [HttpPatch("{caseId:guid}/status")]
         [ProducesResponseType(typeof(VerificationCaseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<VerificationCaseDto> UpdateStatus(
+        public async Task<ActionResult<VerificationCaseDto>> UpdateStatus(
             Guid caseId,
-            UpdateVerificationCaseStatusRequest request)
+            UpdateVerificationCaseStatusRequest request,
+            CancellationToken cancellationToken)
         {
             try
             {
-                var verificationCase = _verificationCases.UpdateStatus(caseId, request.Status);
-                return verificationCase is null ? NotFound() : verificationCase;
+                var verificationCase = await _verificationCases.UpdateStatusAsync(caseId, request.Status, cancellationToken);
+                return verificationCase is null
+                    ? Problem(title: "Verification case not found.", detail: $"No verification case exists for id {caseId}.", statusCode: StatusCodes.Status404NotFound)
+                    : verificationCase;
             }
             catch (ArgumentException ex)
             {
                 return Problem(title: "Invalid verification status.", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        }
+
+        [HttpPost("{caseId:guid}/dispute")]
+        [ProducesResponseType(typeof(DisputeDto), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<DisputeDto>> Dispute(
+            Guid caseId,
+            DisputeRequest request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var dispute = await _verificationCases.DisputeAsync(caseId, request, cancellationToken);
+                return dispute is null
+                    ? Problem(title: "Verification case not found.", detail: $"No verification case exists for id {caseId}.", statusCode: StatusCodes.Status404NotFound)
+                    : Accepted(dispute);
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(title: "Invalid verification dispute.", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
             }
         }
     }

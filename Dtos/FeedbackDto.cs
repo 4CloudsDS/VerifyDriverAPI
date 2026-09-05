@@ -17,5 +17,21 @@ namespace VerifyDriversAPI.Dtos
         string? RelatedEntity,
         string SubmitterType,
         string ModerationStatus,
-        DateTimeOffset SubmittedAtUtc);
+        DateTimeOffset SubmittedAtUtc,
+        string DisputeStatus = "None",
+        string PrivacyStatus = "ModeratedPrivateUntilApproved");
+
+    public sealed record DisputeRequest(
+        int ProfileId,
+        string Reason,
+        string RequestedBy);
+
+    public sealed record DisputeDto(
+        Guid DisputeId,
+        Guid TargetId,
+        int ProfileId,
+        string Reason,
+        string RequestedBy,
+        string Status,
+        DateTimeOffset CreatedAtUtc);
 }

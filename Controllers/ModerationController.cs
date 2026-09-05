@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VerifyDriversAPI.Dtos;
 using VerifyDriversAPI.Services;
@@ -7,6 +8,7 @@ namespace VerifyDriversAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "ModeratorOnly")]
     public sealed class ModerationController : ControllerBase
     {
         private readonly IFeedbackModerationService _feedback;
@@ -22,9 +24,13 @@ namespace VerifyDriversAPI.Controllers
 
         [HttpGet("queue")]
         [ProducesResponseType(typeof(ModerationQueueDto), StatusCodes.Status200OK)]
-        public ActionResult<ModerationQueueDto> GetQueue()
+        public async Task<ActionResult<ModerationQueueDto>> GetQueue(CancellationToken cancellationToken)
         {
-            return new ModerationQueueDto(_feedback.GetQueue(), _verificationCases.GetQueue(), [], []);
+            return new ModerationQueueDto(
+                await _feedback.GetQueueAsync(cancellationToken),
+                await _verificationCases.GetQueueAsync(cancellationToken),
+                [],
+                []);
         }
     }
 }

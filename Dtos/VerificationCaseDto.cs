@@ -31,7 +31,8 @@ namespace VerifyDriversAPI.Dtos
         IReadOnlyList<DocumentEvidenceDto> Evidence,
         IReadOnlyList<CounterpartyConfirmationDto> Confirmations,
         DateTimeOffset CreatedAtUtc,
-        DateTimeOffset UpdatedAtUtc);
+        DateTimeOffset UpdatedAtUtc,
+        string PrivacyStatus = "PrivateDocuments");
 
     public sealed record DocumentEvidenceDto(
         Guid DocumentId,
@@ -52,4 +53,16 @@ namespace VerifyDriversAPI.Dtos
         IReadOnlyList<VerificationCaseDto> VerificationCases,
         IReadOnlyList<string> DuplicateProfiles,
         IReadOnlyList<string> SuspiciousActivity);
+
+    public sealed record MarketplaceRelationshipDto(
+        string RelationshipId,
+        int DriverUserId,
+        int? OwnerUserId,
+        int? VehicleId,
+        int? PlatformId,
+        int? PartnerId,
+        string RelationshipType,
+        string VerificationStatus,
+        string AvailabilityStatus,
+        DateTimeOffset CreatedAtUtc);
 }
