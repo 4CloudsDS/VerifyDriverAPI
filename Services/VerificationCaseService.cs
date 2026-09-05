@@ -27,7 +27,7 @@ namespace VerifyDriversAPI.Services
             CreateVerificationCaseRequest request,
             CancellationToken cancellationToken)
         {
-            Validate(request);
+            await ValidateAsync(request, cancellationToken);
 
             var now = DateTimeOffset.UtcNow;
             var verificationCase = new VerificationCaseDto(
@@ -285,7 +285,7 @@ namespace VerifyDriversAPI.Services
             return confirmations;
         }
 
-        private static void Validate(CreateVerificationCaseRequest request)
+        private async Task ValidateAsync(CreateVerificationCaseRequest request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(request.CaseType))
             {
@@ -300,6 +300,40 @@ namespace VerifyDriversAPI.Services
             if (request.PrimaryProfileId <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(request), "Primary profile id must be positive.");
+            }
+
+            var profileType = await _context.Users
+                .AsNoTracking()
+                .Where(user => user.uID == request.PrimaryProfileId)
+                .Select(user => user.UserType == null ? "Driver" : user.UserType.U_T_description)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (profileType is null)
+            {
+                throw new ArgumentException($"Primary profile {request.PrimaryProfileId} does not exist.", nameof(request));
+            }
+
+            var rules = VerificationRuleCatalog.ForProfileType(profileType);
+            if (!rules.AllowedCaseTypes.Contains(request.CaseType.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException(
+                    $"{rules.ProfileType} profiles cannot create '{request.CaseType}' verification cases.",
+                    nameof(request));
+            }
+
+            var evidenceTypes = (request.Evidence ?? [])
+                .Select(item => item.DocumentType)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var requiredEvidence in rules.RequiredEvidenceTypes)
+            {
+                if (!evidenceTypes.Contains(requiredEvidence))
+                {
+                    throw new ArgumentException(
+                        $"{rules.ProfileType} verification requires {requiredEvidence} evidence.",
+                        nameof(request));
+                }
             }
         }
 

@@ -150,6 +150,16 @@ namespace VerifyDriversAPI.Data
                     created_at_utc TEXT NOT NULL
                 );
                 """);
+
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS owner_vehicle_links (
+                    owner_user_id INTEGER NOT NULL,
+                    vehicle_id INTEGER NOT NULL,
+                    created_at_utc TEXT NOT NULL,
+                    PRIMARY KEY(owner_user_id, vehicle_id)
+                );
+                """);
         }
 
         private static async Task SeedLegacyMarketplaceDataAsync(AppDbContext context)
@@ -174,6 +184,11 @@ namespace VerifyDriversAPI.Data
             await UpsertUserAsync(context, 11, "Nomsa Dlamini", "Female", 29, 4.6m, 2, 11, 2, 3);
             await UpsertUserAsync(context, 12, "Sipho Khumalo", "Male", 42, 3.6m, 3, 12, 3, 4);
             await UpsertUserAsync(context, 13, "Aisha Patel", "Female", 38, 4.8m, 4, 13, 4, 2);
+
+            await LinkOwnerVehicleAsync(context, 10, 1);
+            await LinkOwnerVehicleAsync(context, 13, 2);
+            await LinkOwnerVehicleAsync(context, 13, 3);
+            await LinkOwnerVehicleAsync(context, 13, 4);
 
             await UpsertCommentAsync(context, 1, "Safe driver", 10, 10);
             await UpsertCommentAsync(context, 2, "Fleet verified", 11, 11);
@@ -325,6 +340,18 @@ namespace VerifyDriversAPI.Data
                 });
                 await context.SaveChangesAsync();
             }
+        }
+
+        private static async Task LinkOwnerVehicleAsync(AppDbContext context, int ownerUserId, int vehicleId)
+        {
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO owner_vehicle_links (owner_user_id, vehicle_id, created_at_utc)
+                SELECT {ownerUserId}, {vehicleId}, {DateTimeOffset.UtcNow.ToString("O")}
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM owner_vehicle_links WHERE owner_user_id = {ownerUserId} AND vehicle_id = {vehicleId}
+                );
+                """);
         }
     }
 }

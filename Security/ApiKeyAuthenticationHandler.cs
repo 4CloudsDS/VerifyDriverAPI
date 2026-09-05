@@ -33,7 +33,10 @@ namespace VerifyDriversAPI.Security
             if (_environment.IsDevelopment()
                 && !_configuration.GetSection("Authentication:ApiKeys").GetChildren().Any())
             {
-                return Task.FromResult(Success("development-admin", ["Admin", "Moderator", "PublicUser"]));
+                return Task.FromResult(Success(
+                    "development-admin",
+                    _configuration.GetValue("Authentication:DevelopmentUserId", 10),
+                    ["Admin", "Moderator", "PublicUser", "Driver", "Owner", "Fleet", "Platform"]));
             }
 
             if (!Request.Headers.TryGetValue("X-API-Key", out var providedKey)
@@ -51,15 +54,20 @@ namespace VerifyDriversAPI.Security
                 }
 
                 var roles = apiKey.GetSection("Roles").Get<string[]>() ?? ["PublicUser"];
-                return Task.FromResult(Success(apiKey["Name"] ?? "api-client", roles));
+                var userId = int.TryParse(apiKey["UserId"], out var configuredUserId) ? configuredUserId : 10;
+                return Task.FromResult(Success(apiKey["Name"] ?? "api-client", userId, roles));
             }
 
             return Task.FromResult(AuthenticateResult.Fail("The supplied API key is invalid."));
         }
 
-        private static AuthenticateResult Success(string name, IReadOnlyList<string> roles)
+        private static AuthenticateResult Success(string name, int userId, IReadOnlyList<string> roles)
         {
-            var claims = new List<Claim> { new(ClaimTypes.Name, name) };
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.Name, name),
+                new(ClaimTypes.NameIdentifier, userId.ToString())
+            };
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
             var identity = new ClaimsIdentity(claims, SchemeName);
             return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));

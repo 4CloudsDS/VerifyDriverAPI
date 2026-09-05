@@ -16,6 +16,13 @@ namespace VerifyDriversAPI.Controllers
             _verificationCases = verificationCases;
         }
 
+        [HttpGet("rules")]
+        [ProducesResponseType(typeof(VerificationRulesResponse), StatusCodes.Status200OK)]
+        public ActionResult<VerificationRulesResponse> GetRules([FromQuery] string? profileType)
+        {
+            return VerificationRuleCatalog.ForProfileType(profileType);
+        }
+
         [HttpPost]
         [ProducesResponseType(typeof(VerificationCaseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -34,6 +34,9 @@ namespace VerifyDriversAPI.Infrastructure
             services.AddScoped<ITrustProfileService, TrustProfileService>();
             services.AddScoped<IFeedbackModerationService, FeedbackModerationService>();
             services.AddScoped<IVerificationCaseService, VerificationCaseService>();
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentUserContext, CurrentUserContext>();
+            services.AddScoped<ICurrentUserWorkspaceService, CurrentUserWorkspaceService>();
 
             return services;
         }
