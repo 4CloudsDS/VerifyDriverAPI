@@ -11,7 +11,7 @@ namespace VerifyDriversAPI.Models
         
         [Required]
         [StringLength(35)]
-        public string pName { get; set; }
+        public string pName { get; set; } = string.Empty;
 
         // This model needs to change so that it only contais 
         // public int pID (partner ID)

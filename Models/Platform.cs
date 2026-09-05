@@ -11,9 +11,9 @@ namespace VerifyDriversAPI.Models
         
         [Required]
         [StringLength(10)]
-        public string pName { get; set; }
+        public string pName { get; set; } = string.Empty;
         
         [StringLength(20)]
-        public string pType { get; set; }
+        public string pType { get; set; } = string.Empty;
     }
 }

@@ -11,6 +11,6 @@ namespace VerifyDriversAPI.Models
         
         [Required]
         [StringLength(10)]
-        public string U_T_description { get; set; }
+        public string U_T_description { get; set; } = string.Empty;
     }
 }

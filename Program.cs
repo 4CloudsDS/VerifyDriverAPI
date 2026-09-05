@@ -1,74 +1,88 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VerifyDriversAPI.Data;
-using Microsoft.EntityFrameworkCore;
+using VerifyDriversAPI.Infrastructure;
+using VerifyDriversAPI.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-// Add services to the container.
-builder.Services.AddControllers();
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    var provider = builder.Configuration["DatabaseProvider"] ?? "MySql";
+builder.Services.AddProblemDetails();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var problemDetails = new ValidationProblemDetails(context.ModelState)
+            {
+                Title = "Request validation failed.",
+                Status = StatusCodes.Status400BadRequest,
+                Detail = "One or more request fields are invalid."
+            };
 
-    if (provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+            return new BadRequestObjectResult(problemDetails);
+        };
+    });
+builder.Services.AddVerifyDriverDatabase(builder.Configuration);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("VerifyDriverFrontend", policy =>
     {
-        options.UseSqlite(builder.Configuration.GetConnectionString("SqliteConnection"));
-    }
-    else
-    {
-        options.UseMySql(
-            builder.Configuration.GetConnectionString("DefaultConnection"),
-            new MySqlServerVersion(new Version(8, 0, 25)));
-    }
+        var origins = builder.Configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>()
+            ?? (builder.Environment.IsDevelopment()
+                ? ["https://localhost:7172", "http://localhost:5172", "http://localhost:5000"]
+                : []);
+
+        if (origins.Length == 0)
+        {
+            policy.DisallowCredentials();
+            return;
+        }
+
+        policy.WithOrigins(origins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationHandler.SchemeName,
+        options => { });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ModeratorOnly", policy => policy.RequireRole("Moderator", "Admin"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+await app.Services.InitializeVerifyDriverDatabaseAsync(app.Environment);
+
 app.UseHttpsRedirection();
 
+app.UseCors("VerifyDriverFrontend");
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
 
-//var summaries = new[]
-//{
-//    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-//};
-
-//app.MapGet("/weatherforecast", () =>
-//{
-//    var forecast =  Enumerable.Range(1, 5).Select(index =>
-//        new WeatherForecast
-//        (
-//            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-//            Random.Shared.Next(-20, 55),
-//            summaries[Random.Shared.Next(summaries.Length)]
-//       ))
-//        .ToArray();
-//    return forecast;
-//})
-//.WithName("GetWeatherForecast")
-//.WithOpenApi();
-
-//app.Run();
-
-//record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-//{
-//    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-//}
+public partial class Program
+{
+}

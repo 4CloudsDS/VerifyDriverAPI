@@ -12,7 +12,7 @@ namespace VerifyDriversAPI.Models
         
         [Required]
         [StringLength(255)]
-        public string cText { get; set; }
+        public string cText { get; set; } = string.Empty;
         
         public DateTime cDateTime { get; set; }
         
@@ -20,8 +20,7 @@ namespace VerifyDriversAPI.Models
         
         public int c_Pid { get; set; }
 
-        // Navigation properties
-        public User User { get; set; }
-        public Partner Partner { get; set; }
+        public User? User { get; set; }
+        public Partner? Partner { get; set; }
     }
 }
