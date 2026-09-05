@@ -8,10 +8,12 @@ namespace VerifyDriversAPI.Services
     public sealed class TrustProfileService : ITrustProfileService
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentUserContext _currentUser;
 
-        public TrustProfileService(AppDbContext context)
+        public TrustProfileService(AppDbContext context, ICurrentUserContext currentUser)
         {
             _context = context;
+            _currentUser = currentUser;
         }
 
         public async Task<IReadOnlyList<TrustProfileDto>> GetProfilesAsync(CancellationToken cancellationToken)
@@ -38,8 +40,11 @@ namespace VerifyDriversAPI.Services
 
             var profiles = await GetProfilesAsync(cancellationToken);
             var isOpportunity = mode.Equals("opportunity", StringComparison.OrdinalIgnoreCase);
+            var excludeCurrentUser = ShouldExcludeCurrentUser(mode);
             var matches = profiles
-                .Where(profile => isOpportunity ? MatchesOpportunity(profile, query) : MatchesKnownProfile(profile, query))
+                .Where(profile => excludeCurrentUser ? profile.UserId != _currentUser.UserId : true)
+                .Where(profile => MatchesByMode(profile, query, mode, isOpportunity))
+                .Where(profile => MatchesIntent(profile, request.Intent))
                 .Select(profile => isOpportunity ? profile with { RankingSignals = OpportunitySignals(profile, request) } : profile)
                 .OrderByDescending(profile => isOpportunity ? profile.TrustScore : 0)
                 .ThenBy(profile => RiskSort(profile.RiskLevel))
@@ -125,6 +130,44 @@ namespace VerifyDriversAPI.Services
                 || Contains(profile.Partner?.Name, query)
                 || profile.Platforms.Any(platform => Contains(platform, query))
                 || profile.Signals.Any(signal => Contains(signal, query));
+        }
+
+        private static bool MatchesByMode(TrustProfileDto profile, string query, string mode, bool isOpportunity)
+        {
+            if (isOpportunity || mode.Equals("verification", StringComparison.OrdinalIgnoreCase))
+            {
+                return MatchesOpportunity(profile, query);
+            }
+
+            return MatchesKnownProfile(profile, query);
+        }
+
+        private static bool ShouldExcludeCurrentUser(string mode)
+        {
+            return mode.Equals("profile", StringComparison.OrdinalIgnoreCase)
+                || mode.Equals("opportunity", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool MatchesIntent(TrustProfileDto profile, string? intent)
+        {
+            if (string.IsNullOrWhiteSpace(intent))
+            {
+                return true;
+            }
+
+            return intent.Trim() switch
+            {
+                "looking-for-driver" => IsAny(profile.Role, "Rideshare", "Delivery", "Trucking", "Driver"),
+                "driver-looking-for-owner" => IsAny(profile.Role, "Owner", "Fleet"),
+                "fleet-owner-looking-for-partners" => IsAny(profile.Role, "Owner", "Fleet", "Platform"),
+                "platform-vetting-profiles" => IsAny(profile.Role, "Rideshare", "Delivery", "Trucking", "Owner", "Fleet"),
+                _ => true
+            };
+        }
+
+        private static bool IsAny(string value, params string[] expected)
+        {
+            return expected.Any(item => value.Contains(item, StringComparison.OrdinalIgnoreCase));
         }
 
         private static IReadOnlyList<string> OpportunitySignals(TrustProfileDto profile, ProfileSearchRequest request)

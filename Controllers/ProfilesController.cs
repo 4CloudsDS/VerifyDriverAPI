@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using VerifyDriversAPI.Data;
 using VerifyDriversAPI.Dtos;
 using VerifyDriversAPI.Services;
 
@@ -10,10 +11,12 @@ namespace VerifyDriversAPI.Controllers
     public sealed class ProfilesController : ControllerBase
     {
         private readonly ITrustProfileService _profiles;
+        private readonly ICurrentUserWorkspaceService _workspace;
 
-        public ProfilesController(ITrustProfileService profiles)
+        public ProfilesController(ITrustProfileService profiles, ICurrentUserWorkspaceService workspace)
         {
             _profiles = profiles;
+            _workspace = workspace;
         }
 
         [HttpGet("search")]
@@ -39,6 +42,27 @@ namespace VerifyDriversAPI.Controllers
         {
             var profile = await _profiles.GetProfileAsync(userId, cancellationToken);
             return profile is null ? NotFound() : profile;
+        }
+
+        [HttpPatch("me")]
+        [ProducesResponseType(typeof(TrustProfileDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<TrustProfileDto>> UpdateCurrentUserProfile(
+            UpdateProfileRequest request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _workspace.UpdateProfileAsync(request, cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(title: "Invalid profile update.", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Problem(title: "Profile update not authorized.", detail: ex.Message, statusCode: StatusCodes.Status403Forbidden);
+            }
         }
     }
 }

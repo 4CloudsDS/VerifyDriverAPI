@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VerifyDriversAPI.Data;
+using VerifyDriversAPI.Dtos;
 using VerifyDriversAPI.Models;
+using VerifyDriversAPI.Services;
 
 namespace VerifyDriversAPI.Controllers
 {
@@ -13,10 +15,64 @@ namespace VerifyDriversAPI.Controllers
     public class VehiclesController: ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentUserWorkspaceService _workspace;
 
-        public VehiclesController(AppDbContext context)
+        public VehiclesController(AppDbContext context, ICurrentUserWorkspaceService workspace)
         {
             _context = context;
+            _workspace = workspace;
+        }
+
+        [HttpGet("mine")]
+        [ProducesResponseType(typeof(IReadOnlyList<VehicleWorkspaceDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IReadOnlyList<VehicleWorkspaceDto>>> GetMine(CancellationToken cancellationToken)
+        {
+            return Ok(await _workspace.GetVehiclesAsync(cancellationToken));
+        }
+
+        [HttpPost("mine")]
+        [ProducesResponseType(typeof(VehicleWorkspaceDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<VehicleWorkspaceDto>> AddMine(
+            UpsertVehicleRequest request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var vehicle = await _workspace.AddVehicleAsync(request, cancellationToken);
+                return CreatedAtAction(nameof(GetVehicle), new { id = vehicle.VehicleId }, vehicle);
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(title: "Invalid vehicle update.", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+        }
+
+        [HttpPut("mine/{id:int}")]
+        [ProducesResponseType(typeof(VehicleWorkspaceDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<VehicleWorkspaceDto>> UpdateMine(
+            int id,
+            UpsertVehicleRequest request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var vehicle = await _workspace.UpdateVehicleAsync(id, request, cancellationToken);
+                return vehicle is null
+                    ? Problem(title: "Vehicle not found.", detail: $"No vehicle exists for id {id}.", statusCode: StatusCodes.Status404NotFound)
+                    : vehicle;
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(title: "Invalid vehicle update.", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Problem(title: "Vehicle update not authorized.", detail: ex.Message, statusCode: StatusCodes.Status403Forbidden);
+            }
         }
 
         // GET: api/Vehicles
